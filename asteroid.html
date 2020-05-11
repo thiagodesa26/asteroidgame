@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Asteroid Game</title>
+  </head>
+  <body>
+    <p>
+      <label>Mute</label
+      ><input type="checkbox" checked onclick="game.muted = !game.muted" />
+    </p>
+    <canvas
+      id="minha-tela"
+      width="800"
+      height="400"
+      style="
+        border: #000 solid 1px;
+        background: url('./images/space.png');
+        background-color: #000;
+      "
+    >
+    </canvas>
+    <script>
+      // Defining Canvas
+      let canvas = document.getElementById("minha-tela");
+      let ctx = canvas.getContext("2d");
+
+      // Ship declaration
+      let spaceship = new Image();
+      spaceship.onload = function () {
+        ctx.drawImage(
+          spaceship,
+          shipInfo.position.x,
+          shipInfo.position.y,
+          100,
+          100
+        );
+      };
+      spaceship.src = "./images/spaceship-u.png";
+
+      // Asteroid declaration
+      let asteroid = new Image();
+      asteroid.onload = function () {
+        ctx.drawImage(
+          asteroid,
+          asteroidInfo.position.x,
+          asteroidInfo.position.y,
+          50,
+          50
+        );
+      };
+      asteroid.src = "./images/asteroid.png";
+
+      let asteroids = [];
+
+      // Ship Info
+      const shipInfo = {
+        speed: {
+          x: 0,
+          y: 0,
+        },
+        position: {
+          x: 0,
+          y: 150,
+        },
+      };
+
+      // Asteroid Info
+      const asteroidInfo = {
+        position: {
+          x: 0,
+          y: 0,
+        },
+        speed: 2,
+        qty: 3,
+      };
+
+      // Level info
+      const faseInfo = {
+        speed: 1,
+        maxSpeed: 4,
+        maxAsteroidSize: 10,
+        maxAsteroidNumbers: 20,
+      };
+
+      //a função gameloop é chamada aqui
+      requestAnimationFrame(gameloop);
+
+      // movimento
+      window.onkeydown = pressionaTecla;
+      function pressionaTecla(tecla) {
+        switch (tecla.keyCode) {
+          case 38:
+            spaceship.src !== "./images/spaceship-u.png"
+              ? (spaceship.src = "./images/spaceship-u.png")
+              : "";
+            shipInfo.speed.y >= -faseInfo.maxSpeed
+              ? (shipInfo.speed.y -= faseInfo.speed)
+              : "";
+            break;
+
+          case 40:
+            spaceship.src !== "./images/spaceship-d.png"
+              ? (spaceship.src = "./images/spaceship-d.png")
+              : "";
+            shipInfo.speed.y <= faseInfo.maxSpeed
+              ? (shipInfo.speed.y += faseInfo.speed)
+              : "";
+
+            break;
+
+          case 39:
+            spaceship.src !== "./images/spaceship-r.png"
+              ? (spaceship.src = "./images/spaceship-r.png")
+              : "";
+            shipInfo.speed.x <= faseInfo.maxSpeed
+              ? (shipInfo.speed.x += faseInfo.speed)
+              : "";
+
+            break;
+
+          case 37:
+            spaceship.src !== "./images/spaceship-l.png"
+              ? (spaceship.src = "./images/spaceship-l.png")
+              : "";
+            shipInfo.speed.x >= -faseInfo.maxSpeed
+              ? (shipInfo.speed.x -= faseInfo.speed)
+              : "";
+            break;
+
+          default:
+            break;
+        }
+      }
+
+      function createNewAsteroid(posx, posy) {
+        let newAsteroid = {
+          posx: posx,
+          posy: posy,
+          speedx:
+            Math.round(Math.random() * asteroidInfo.speed) *
+            (Math.random() < 0.51 ? -1 : 1),
+          speedy:
+            Math.round(Math.random() * asteroidInfo.speed) *
+            (Math.random() < 0.51 ? -1 : 1),
+          size:
+            Math.round(Math.random() * faseInfo.maxAsteroidSize) === 0
+              ? 1
+              : Math.round(Math.random() * faseInfo.maxAsteroidSize),
+        };
+
+        return newAsteroid;
+      }
+
+      function addAsteroids() {
+        asteroids = [];
+        let x, y;
+
+        for (let i = 0; i < faseInfo.maxAsteroidNumbers; i++) {
+          x = Math.round(Math.random() * canvas.width);
+          y = Math.round(Math.random() * canvas.height);
+          if (!(x > shipInfo.position.x && x < shipInfo.position.x + 50)) {
+            asteroids.push(createNewAsteroid(x, y));
+          }
+        }
+      }
+
+      addAsteroids();
+      console.log(asteroids);
+      function gameloop() {
+        ctx.clearRect(0, 0, 800, 400); //antes de fazer o desenho é preciso limpar o canvas
+        // Handle the edge width
+        if (shipInfo.position.x > canvas.width) {
+          shipInfo.position.x = -50;
+        } else if (shipInfo.position.x < -50) {
+          shipInfo.position.x = canvas.width;
+        }
+        // Handle the edge height
+        if (shipInfo.position.y > canvas.height) {
+          shipInfo.position.y = -50;
+        } else if (shipInfo.position.y < -50) {
+          shipInfo.position.y = canvas.height;
+        }
+
+        // move the ship
+        shipInfo.position.x += shipInfo.speed.x;
+        shipInfo.position.y += shipInfo.speed.y;
+
+        // Draw the Ship
+        ctx.drawImage(
+          spaceship,
+          shipInfo.position.x,
+          shipInfo.position.y,
+          50,
+          50
+        );
+
+        // Draw all the Asteroids
+        for (let index = 0; index < asteroids.length; index++) {
+          let posx, posy, speedy, speedx, size;
+
+          // Asteroid Configurations
+          posx = asteroids[index].posx;
+          posy = asteroids[index].posy;
+          speedy = asteroids[index].speedy;
+          speedx = asteroids[index].speedx;
+          size = asteroids[index].size;
+
+          // move the asteroid
+          // Handle the edge width
+          if (asteroids[index].posx > canvas.width) {
+            asteroids[index].posx = -80 * size;
+          } else if (asteroids[index].posx < -80) {
+            asteroids[index].posx = canvas.width;
+          }
+          // Handle the edge height
+          if (asteroids[index].posy > canvas.height) {
+            asteroids[index].posy = -80 * size;
+          } else if (asteroids[index].posy < -80 * size) {
+            asteroids[index].posy = canvas.height;
+          }
+          asteroids[index].posx += asteroids[index].speedx;
+          asteroids[index].posy += asteroids[index].speedy;
+
+          ctx.drawImage(asteroid, posx, posy, 80 * size, 80 * size);
+
+          // console.log(asteroid, posx, posy, 80 * size, 80 * size);
+        }
+
+        requestAnimationFrame(gameloop);
+      }
+    </script>
+  </body>
+</html>
