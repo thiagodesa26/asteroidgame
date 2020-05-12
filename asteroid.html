@@ -25,6 +25,12 @@
       let canvas = document.getElementById("minha-tela");
       let ctx = canvas.getContext("2d");
 
+      // Debug Mode
+      const debug = false;
+
+      // frames
+      let FPS = 0;
+
       // Ship declaration
       let spaceship = new Image();
       spaceship.onload = function () {
@@ -50,8 +56,14 @@
         );
       };
       asteroid.src = "./images/asteroid.png";
-
       let asteroids = [];
+
+      // game over declaration
+      let gameOver = new Image();
+      gameOver.onload = function () {
+        ctx.drawImage(gameOver, 100, 100, 50, 50);
+      };
+      gameOver.src = "./images/gameOver.png";
 
       // Ship Info
       const shipInfo = {
@@ -63,6 +75,7 @@
           x: 0,
           y: 150,
         },
+        crashed: false,
       };
 
       // Asteroid Info
@@ -79,8 +92,8 @@
       const faseInfo = {
         speed: 1,
         maxSpeed: 4,
-        maxAsteroidSize: 10,
-        maxAsteroidNumbers: 20,
+        maxAsteroidSize: 3,
+        maxAsteroidNumbers: 8,
       };
 
       //a função gameloop é chamada aqui
@@ -89,64 +102,65 @@
       // movimento
       window.onkeydown = pressionaTecla;
       function pressionaTecla(tecla) {
-        switch (tecla.keyCode) {
-          case 38:
-            spaceship.src !== "./images/spaceship-u.png"
-              ? (spaceship.src = "./images/spaceship-u.png")
-              : "";
-            shipInfo.speed.y >= -faseInfo.maxSpeed
-              ? (shipInfo.speed.y -= faseInfo.speed)
-              : "";
-            break;
+        if (!shipInfo.crashed) {
+          switch (tecla.keyCode) {
+            case 38:
+              spaceship.src !== "./images/spaceship-u.png"
+                ? (spaceship.src = "./images/spaceship-u.png")
+                : "";
+              shipInfo.speed.y >= -faseInfo.maxSpeed
+                ? (shipInfo.speed.y -= faseInfo.speed)
+                : "";
+              break;
 
-          case 40:
-            spaceship.src !== "./images/spaceship-d.png"
-              ? (spaceship.src = "./images/spaceship-d.png")
-              : "";
-            shipInfo.speed.y <= faseInfo.maxSpeed
-              ? (shipInfo.speed.y += faseInfo.speed)
-              : "";
+            case 40:
+              spaceship.src !== "./images/spaceship-d.png"
+                ? (spaceship.src = "./images/spaceship-d.png")
+                : "";
+              shipInfo.speed.y <= faseInfo.maxSpeed
+                ? (shipInfo.speed.y += faseInfo.speed)
+                : "";
 
-            break;
+              break;
 
-          case 39:
-            spaceship.src !== "./images/spaceship-r.png"
-              ? (spaceship.src = "./images/spaceship-r.png")
-              : "";
-            shipInfo.speed.x <= faseInfo.maxSpeed
-              ? (shipInfo.speed.x += faseInfo.speed)
-              : "";
+            case 39:
+              spaceship.src !== "./images/spaceship-r.png"
+                ? (spaceship.src = "./images/spaceship-r.png")
+                : "";
+              shipInfo.speed.x <= faseInfo.maxSpeed
+                ? (shipInfo.speed.x += faseInfo.speed)
+                : "";
 
-            break;
+              break;
 
-          case 37:
-            spaceship.src !== "./images/spaceship-l.png"
-              ? (spaceship.src = "./images/spaceship-l.png")
-              : "";
-            shipInfo.speed.x >= -faseInfo.maxSpeed
-              ? (shipInfo.speed.x -= faseInfo.speed)
-              : "";
-            break;
+            case 37:
+              spaceship.src !== "./images/spaceship-l.png"
+                ? (spaceship.src = "./images/spaceship-l.png")
+                : "";
+              shipInfo.speed.x >= -faseInfo.maxSpeed
+                ? (shipInfo.speed.x -= faseInfo.speed)
+                : "";
+              break;
 
-          default:
-            break;
+            default:
+              break;
+          }
         }
+      }
+      function distBetweenPoints(x1, y1, x2, y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
       }
 
       function createNewAsteroid(posx, posy) {
+        let tSize = randomSize();
+        let tRadius = (80 * tSize) / 2;
         let newAsteroid = {
           posx: posx,
           posy: posy,
-          speedx:
-            Math.round(Math.random() * asteroidInfo.speed) *
-            (Math.random() < 0.51 ? -1 : 1),
-          speedy:
-            Math.round(Math.random() * asteroidInfo.speed) *
-            (Math.random() < 0.51 ? -1 : 1),
-          size:
-            Math.round(Math.random() * faseInfo.maxAsteroidSize) === 0
-              ? 1
-              : Math.round(Math.random() * faseInfo.maxAsteroidSize),
+          speedx: randomSpeed(),
+          speedy: randomSpeed(),
+          size: tSize,
+          radius: tRadius,
         };
 
         return newAsteroid;
@@ -165,68 +179,200 @@
         }
       }
 
+      // generates random speed value
+      function randomSpeed() {
+        let speed = 0;
+        while (speed == 0) {
+          speed =
+            Math.floor(Math.random() * asteroidInfo.speed) *
+            (Math.random() < 0.51 ? -1 : 1);
+        }
+        return speed;
+      }
+
+      // generates random size value
+      function randomSize() {
+        let size = 0;
+        while (size == 0) {
+          size = Math.round(Math.random() * faseInfo.maxAsteroidSize);
+        }
+        return size;
+      }
+
+      // populates asteroid array
       addAsteroids();
       console.log(asteroids);
+
+      function shipCrash(px, py) {
+        shipInfo.crashed = true;
+      }
+
       function gameloop() {
-        ctx.clearRect(0, 0, 800, 400); //antes de fazer o desenho é preciso limpar o canvas
-        // Handle the edge width
-        if (shipInfo.position.x > canvas.width) {
-          shipInfo.position.x = -50;
-        } else if (shipInfo.position.x < -50) {
-          shipInfo.position.x = canvas.width;
-        }
-        // Handle the edge height
-        if (shipInfo.position.y > canvas.height) {
-          shipInfo.position.y = -50;
-        } else if (shipInfo.position.y < -50) {
-          shipInfo.position.y = canvas.height;
-        }
-
-        // move the ship
-        shipInfo.position.x += shipInfo.speed.x;
-        shipInfo.position.y += shipInfo.speed.y;
-
-        // Draw the Ship
-        ctx.drawImage(
-          spaceship,
-          shipInfo.position.x,
-          shipInfo.position.y,
-          50,
-          50
-        );
-
-        // Draw all the Asteroids
-        for (let index = 0; index < asteroids.length; index++) {
-          let posx, posy, speedy, speedx, size;
-
-          // Asteroid Configurations
-          posx = asteroids[index].posx;
-          posy = asteroids[index].posy;
-          speedy = asteroids[index].speedy;
-          speedx = asteroids[index].speedx;
-          size = asteroids[index].size;
-
-          // move the asteroid
+        FPS += 1;
+        if (!shipInfo.crashed) {
+          ctx.clearRect(0, 0, 800, 400); //antes de fazer o desenho é preciso limpar o canvas
           // Handle the edge width
-          if (asteroids[index].posx > canvas.width) {
-            asteroids[index].posx = -80 * size;
-          } else if (asteroids[index].posx < -80) {
-            asteroids[index].posx = canvas.width;
+          if (shipInfo.position.x > canvas.width) {
+            shipInfo.position.x = -50;
+          } else if (shipInfo.position.x < -50) {
+            shipInfo.position.x = canvas.width;
           }
           // Handle the edge height
-          if (asteroids[index].posy > canvas.height) {
-            asteroids[index].posy = -80 * size;
-          } else if (asteroids[index].posy < -80 * size) {
-            asteroids[index].posy = canvas.height;
+          if (shipInfo.position.y > canvas.height) {
+            shipInfo.position.y = -50;
+          } else if (shipInfo.position.y < -50) {
+            shipInfo.position.y = canvas.height;
           }
-          asteroids[index].posx += asteroids[index].speedx;
-          asteroids[index].posy += asteroids[index].speedy;
 
-          ctx.drawImage(asteroid, posx, posy, 80 * size, 80 * size);
+          // move the ship
+          shipInfo.position.x += shipInfo.speed.x;
+          shipInfo.position.y += shipInfo.speed.y;
 
-          // console.log(asteroid, posx, posy, 80 * size, 80 * size);
+          // Draw the Ship
+          ctx.drawImage(
+            spaceship,
+            shipInfo.position.x,
+            shipInfo.position.y,
+            50,
+            50
+          );
+
+          // draw crash boundary
+          if (debug) {
+            ctx.strokeStyle = "#FFF"; // some color/style
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(
+              shipInfo.position.x + 25,
+              shipInfo.position.y + 25,
+              20,
+              0,
+              2 * Math.PI
+            );
+            ctx.stroke();
+            ctx.closePath();
+          }
+
+          // Draw all the Asteroids
+          for (let index = 0; index < asteroids.length; index++) {
+            let posx, posy, speedy, speedx, size;
+
+            // Asteroid Configurations
+            posx = asteroids[index].posx;
+            posy = asteroids[index].posy;
+            size = asteroids[index].size;
+            radius = asteroids[index].radius;
+            speedy = asteroids[index].speedy;
+            speedx = asteroids[index].speedx;
+
+            // Handle the edge width
+            if (asteroids[index].posx > canvas.width) {
+              asteroids[index].posx = -80 * size;
+            } else if (asteroids[index].posx < -80) {
+              asteroids[index].posx = canvas.width;
+            }
+            // Handle the edge height
+            if (asteroids[index].posy > canvas.height) {
+              asteroids[index].posy = -80 * size;
+            } else if (asteroids[index].posy < -80 * size) {
+              asteroids[index].posy = canvas.height;
+            }
+
+            // draw the asteroid
+            ctx.drawImage(asteroid, posx, posy, 80 * size, 80 * size);
+
+            // draw crash boundary
+            if (debug) {
+              ctx.strokeStyle = "#FFF"; // color
+              ctx.beginPath();
+              ctx.lineWidth = 2;
+              ctx.arc(posx + radius, posy + radius, radius, 0, 2 * Math.PI);
+              ctx.stroke();
+              ctx.closePath();
+            }
+
+            // move the asteroid
+            asteroids[index].posx += asteroids[index].speedx;
+            asteroids[index].posy += asteroids[index].speedy;
+            // handle collision
+            if (
+              distBetweenPoints(
+                shipInfo.position.x + 20,
+                shipInfo.position.y + 10,
+                posx + radius,
+                posy + radius
+              ) <
+              20 + radius
+            ) {
+              shipCrash(1, 1);
+            }
+          }
+        } else {
+          ctx.fillStyle = "darkred";
+          ctx.beginPath();
+          ctx.arc(
+            shipInfo.position.x + 25,
+            shipInfo.position.y + 25,
+            25 * 1.7,
+            0,
+            Math.PI * 2,
+            false
+          );
+          ctx.fill();
+          ctx.fillStyle = "red";
+          ctx.beginPath();
+          ctx.arc(
+            shipInfo.position.x + 25,
+            shipInfo.position.y + 25,
+            25 * 1.4,
+            0,
+            Math.PI * 2,
+            false
+          );
+          ctx.fill();
+          ctx.fillStyle = "orange";
+          ctx.beginPath();
+          ctx.arc(
+            shipInfo.position.x + 25,
+            shipInfo.position.y + 25,
+            25 * 1.1,
+            0,
+            Math.PI * 2,
+            false
+          );
+          ctx.fill();
+          ctx.fillStyle = "yellow";
+          ctx.beginPath();
+          ctx.arc(
+            shipInfo.position.x + 25,
+            shipInfo.position.y + 25,
+            25 * 0.8,
+            0,
+            Math.PI * 2,
+            false
+          );
+          ctx.fill();
+          ctx.fillStyle = "white";
+          ctx.beginPath();
+          ctx.arc(
+            shipInfo.position.x + 25,
+            shipInfo.position.y + 25,
+            25 * 0.5,
+            0,
+            Math.PI * 2,
+            false
+          );
+          ctx.fill();
+
+          // Draw Game Over
+          ctx.drawImage(
+            gameOver,
+            -100,
+            -60,
+            canvas.width + 0.3 * canvas.width,
+            canvas.height + 0.3 * canvas.height
+          );
         }
-
         requestAnimationFrame(gameloop);
       }
     </script>
