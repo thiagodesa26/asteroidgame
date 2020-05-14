@@ -2,13 +2,15 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Asteroid Game</title>
+    <title>JS - Asteroid Game</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
   </head>
-  <body>
-    <p>
-      <label>Mute</label
-      ><input type="checkbox" checked onclick="game.muted = !game.muted" />
-    </p>
+
+  <body style="background-color: #000;">
+    <h1 style="color: #fff;">JS - Asteroid Game</h1>
     <canvas
       id="minha-tela"
       width="800"
@@ -30,6 +32,19 @@
 
       // frames
       let FPS = 0;
+
+      // start declaration
+      let pressStart = new Image();
+      pressStart.onload = function () {
+        ctx.drawImage(
+          pressStart,
+          shipInfo.position.x,
+          shipInfo.position.y,
+          100,
+          100
+        );
+      };
+      pressStart.src = "./images/pressStart.gif";
 
       // Ship declaration
       let spaceship = new Image();
@@ -76,6 +91,8 @@
           y: 150,
         },
         crashed: false,
+        thrust: false,
+        direction: "up",
       };
 
       // Asteroid Info
@@ -87,9 +104,20 @@
         speed: 2,
         qty: 3,
       };
+      // Game info
+      const gameInfo = {
+        start: false,
+        timeInLevel: 60, // 60 seconds in each level to go up
+        transitionMaxTime: 60,
+        transition: false,
+        transitionTimer: 0,
+        score: 0,
+        noMovement: 0,
+      };
 
       // Level info
       const faseInfo = {
+        level: 1,
         speed: 1,
         maxSpeed: 4,
         maxAsteroidSize: 3,
@@ -102,7 +130,8 @@
       // movimento
       window.onkeydown = pressionaTecla;
       function pressionaTecla(tecla) {
-        if (!shipInfo.crashed) {
+        if (!shipInfo.crashed && !gameInfo.transition) {
+          shipInfo.thrust = true;
           switch (tecla.keyCode) {
             case 38:
               spaceship.src !== "./images/spaceship-u.png"
@@ -111,6 +140,7 @@
               shipInfo.speed.y >= -faseInfo.maxSpeed
                 ? (shipInfo.speed.y -= faseInfo.speed)
                 : "";
+              shipInfo.direction = "up";
               break;
 
             case 40:
@@ -120,6 +150,7 @@
               shipInfo.speed.y <= faseInfo.maxSpeed
                 ? (shipInfo.speed.y += faseInfo.speed)
                 : "";
+              shipInfo.direction = "down";
 
               break;
 
@@ -130,6 +161,7 @@
               shipInfo.speed.x <= faseInfo.maxSpeed
                 ? (shipInfo.speed.x += faseInfo.speed)
                 : "";
+              shipInfo.direction = "right";
 
               break;
 
@@ -140,6 +172,7 @@
               shipInfo.speed.x >= -faseInfo.maxSpeed
                 ? (shipInfo.speed.x -= faseInfo.speed)
                 : "";
+              shipInfo.direction = "left";
               break;
 
             default:
@@ -147,13 +180,16 @@
           }
         }
       }
-      function distBetweenPoints(x1, y1, x2, y2) {
+
+      window.onkeyup = () => {
+        shipInfo.thrust = false;
+      };
+
+      function distanceBetweenCenters(x1, y1, x2, y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
       }
 
-      function createNewAsteroid(posx, posy) {
-        let tSize = randomSize();
-        let tRadius = (80 * tSize) / 2;
+      function createNewAsteroid(posx, posy, tSize, tRadius) {
         let newAsteroid = {
           posx: posx,
           posy: posy,
@@ -171,11 +207,21 @@
         let x, y;
 
         for (let i = 0; i < faseInfo.maxAsteroidNumbers; i++) {
-          x = Math.round(Math.random() * canvas.width);
-          y = Math.round(Math.random() * canvas.height);
-          if (!(x > shipInfo.position.x && x < shipInfo.position.x + 50)) {
-            asteroids.push(createNewAsteroid(x, y));
-          }
+          let tSize = randomSize();
+          let tRadius = (80 * tSize) / 2;
+          do {
+            x = Math.round(Math.random() * canvas.width);
+            y = Math.round(Math.random() * canvas.height);
+          } while (
+            distanceBetweenCenters(
+              shipInfo.position.x + 20,
+              shipInfo.position.y + 20,
+              x + tRadius,
+              y + tRadius
+            ) <
+            100 + tRadius
+          );
+          asteroids.push(createNewAsteroid(x, y, tSize, tRadius));
         }
       }
 
@@ -201,16 +247,35 @@
 
       // populates asteroid array
       addAsteroids();
-      console.log(asteroids);
 
       function shipCrash(px, py) {
         shipInfo.crashed = true;
       }
 
+      // Canvas Animation
       function gameloop() {
+        // Frames
         FPS += 1;
-        if (!shipInfo.crashed) {
-          ctx.clearRect(0, 0, 800, 400); //antes de fazer o desenho é preciso limpar o canvas
+
+        // Level up
+        if (!shipInfo.crashed && !gameInfo.transition) {
+          gameInfo.score += 1;
+          if (shipInfo.speed == 0) {
+            gameInfo.noMovement += 1;
+          }
+
+          // Penalty for not moving
+          if (gameInfo.noMovement == 240) {
+            gameInfo.score -= 1000;
+            gameInfo.noMovement = 0;
+          }
+          if (FPS == gameInfo.timeInLevel * faseInfo.level * 60) {
+            faseInfo.level += 1;
+            gameInfo.transition = true;
+          }
+          // Clear the canvas
+          ctx.clearRect(0, 0, 800, 400);
+
           // Handle the edge width
           if (shipInfo.position.x > canvas.width) {
             shipInfo.position.x = -50;
@@ -227,6 +292,42 @@
           // move the ship
           shipInfo.position.x += shipInfo.speed.x;
           shipInfo.position.y += shipInfo.speed.y;
+
+          // Draw the thrust
+          if (shipInfo.thrust) {
+            ctx.fillStyle = "red";
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            switch (shipInfo.direction) {
+              case "down":
+                ctx.moveTo(shipInfo.position.x + 18, shipInfo.position.y + 10);
+                ctx.lineTo(shipInfo.position.x + 32, shipInfo.position.y + 10);
+                ctx.lineTo(shipInfo.position.x + 24, shipInfo.position.y - 12);
+                break;
+              case "left":
+                ctx.moveTo(shipInfo.position.x + 30, shipInfo.position.y + 15);
+                ctx.lineTo(shipInfo.position.x + 30, shipInfo.position.y + 35);
+                ctx.lineTo(shipInfo.position.x + 65, shipInfo.position.y + 25);
+                break;
+              case "right":
+                ctx.moveTo(shipInfo.position.x + 10, shipInfo.position.y + 18);
+                ctx.lineTo(shipInfo.position.x + 10, shipInfo.position.y + 32);
+                ctx.lineTo(shipInfo.position.x - 15, shipInfo.position.y + 25);
+                break;
+
+              default:
+                ctx.moveTo(shipInfo.position.x + 15, shipInfo.position.y + 30);
+                ctx.lineTo(shipInfo.position.x + 35, shipInfo.position.y + 30);
+                ctx.lineTo(shipInfo.position.x + 24, shipInfo.position.y + 62);
+                break;
+            }
+
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          }
 
           // Draw the Ship
           ctx.drawImage(
@@ -296,7 +397,7 @@
             asteroids[index].posy += asteroids[index].speedy;
             // handle collision
             if (
-              distBetweenPoints(
+              distanceBetweenCenters(
                 shipInfo.position.x + 20,
                 shipInfo.position.y + 10,
                 posx + radius,
@@ -304,8 +405,45 @@
               ) <
               20 + radius
             ) {
-              shipCrash(1, 1);
+              // shipCrash(1, 1);
             }
+            // Score and Level display
+            ctx.font = "30px Times New Roman";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "left";
+            ctx.fillText(
+              "SCORE: " + gameInfo.score.toString(),
+              0,
+              canvas.height
+            );
+            ctx.fillText(
+              "LEVEL: " + faseInfo.level.toString(),
+              0,
+              canvas.height - 30
+            );
+          }
+        } else if (gameInfo.transition) {
+          if (gameInfo.transitionTimer == 0) {
+            ctx.font = "60px Times New Roman";
+            ctx.fillStyle = "red";
+            ctx.textAlign = "center";
+            ctx.fillText(
+              "LEVEL " + faseInfo.level.toString() + " ready!",
+              canvas.width / 2,
+              canvas.height / 2
+            );
+          }
+          if (gameInfo.transitionTimer * 60 < gameInfo.transitionMaxTime * 60) {
+            gameInfo.transitionTimer += 2;
+          } else {
+            gameInfo.transition = false;
+            gameInfo.transitionTimer = 0;
+            faseInfo.maxAsteroidNumbers < 15
+              ? (faseInfo.maxAsteroidNumbers += 2)
+              : "";
+            faseInfo.maxSpeed += 2;
+            asteroidInfo.speed += 2;
+            addAsteroids();
           }
         } else {
           ctx.fillStyle = "darkred";
@@ -365,14 +503,9 @@
           ctx.fill();
 
           // Draw Game Over
-          ctx.drawImage(
-            gameOver,
-            -100,
-            -60,
-            canvas.width + 0.3 * canvas.width,
-            canvas.height + 0.3 * canvas.height
-          );
+          ctx.drawImage(gameOver, 350, 150, 100, 100);
         }
+
         requestAnimationFrame(gameloop);
       }
     </script>
